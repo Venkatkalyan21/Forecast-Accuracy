@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forecast Accuracy Evaluator</title>
+    <meta name="description" content="Understand how accurate a forecast is using MAE, MAPE, and RMSE — with plain-English explanations.">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="dashboard">
+
+        <!-- ── Header ── -->
+        <header>
+            <div class="header-badge">📊 Mini Project</div>
+            <h1>Forecast Accuracy Evaluator</h1>
+            <p>See how close a prediction is to reality — explained in plain English</p>
+        </header>
+
+        <!-- ── How It Works Explainer ── -->
+        <div class="explainer-bar glass-panel" id="explainer-bar">
+            <button class="explainer-toggle" id="explainer-toggle" aria-expanded="false">
+                <span>💡 What does this tool do? How do the metrics work?</span>
+                <span class="explainer-arrow">▼</span>
+            </button>
+            <div class="explainer-content" id="explainer-content">
+                <div class="explainer-grid">
+                    <div class="explainer-step">
+                        <div class="step-icon">📥</div>
+                        <h4>1. Load Data</h4>
+                        <p>Real temperature data is loaded (or you can upload your own CSV). We split it: <strong>80% to train</strong> the model, <strong>20% to test</strong> it.</p>
+                    </div>
+                    <div class="explainer-step">
+                        <div class="step-icon">📈</div>
+                        <h4>2. Make Predictions</h4>
+                        <p>We fit a <strong>Linear Regression</strong> line to the training data, then use it to predict values for the test period.</p>
+                    </div>
+                    <div class="explainer-step">
+                        <div class="step-icon">🎯</div>
+                        <h4>3. Measure Error</h4>
+                        <p>We compare predicted vs. actual values using <strong>three error metrics</strong>. Smaller is always better!</p>
+                    </div>
+                    <div class="explainer-step">
+                        <div class="step-icon">🔍</div>
+                        <h4>4. Interpret Results</h4>
+                        <p>The <strong>Insights panel</strong> below the metrics tells you in plain English whether the model performed well or not.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Dataset Info Banner ── -->
+        <div class="dataset-banner glass-panel">
+            <div class="dataset-info">
+                <span class="dataset-badge">📦</span>
+                <div>
+                    <strong id="dataset-name">Daily Min Temperatures, Melbourne (1981–1990)</strong>
+                    <p id="dataset-source">Source: <a href="https://raw.githubusercontent.com/jbrownlee/Datasets/master/daily-min-temperatures.csv" target="_blank">Jason Brownlee / GitHub</a> — 3,650 real daily temperature records</p>
+                </div>
+            </div>
+            <div class="banner-actions">
+                <label for="csv-upload" class="btn upload-btn" id="upload-label">⬆ Upload CSV</label>
+                <input type="file" id="csv-upload" accept=".csv" style="display:none;">
+                <button class="btn manual-btn" id="open-manual-modal">✏️ Manual Entry</button>
+            </div>
+        </div>
+
+        <div class="upload-hint" id="upload-hint">
+            CSV must have two columns: a <strong>label/date column</strong> and a <strong>numeric value column</strong>.
+        </div>
+
+        <main>
+            <!-- Loading Spinner -->
+            <div id="loading-overlay" class="loading-overlay">
+                <div class="spinner"></div>
+                <p>Loading dataset &amp; running model…</p>
+            </div>
+
+            <!-- ── Metric Cards ── -->
+            <div class="metrics-container" id="metrics-container">
+
+                <div class="metric-card mae glass-panel">
+                    <div class="metric-header">
+                        <h3>MAE</h3>
+                        <span class="metric-tooltip" data-tip="MAE = average of |actual − predicted|. It tells you how far off the model is on a typical day, in the same units as your data (e.g. °C or $).">ⓘ</span>
+                    </div>
+                    <p class="label">Mean Absolute Error</p>
+                    <p class="value" id="val-mae">--</p>
+                    <p class="metric-plain" id="plain-mae">Loading…</p>
+                </div>
+
+                <div class="metric-card mape glass-panel">
+                    <div class="metric-header">
+                        <h3>MAPE</h3>
+                        <span class="metric-tooltip" data-tip="MAPE = average of |error / actual| × 100. It expresses error as a percentage, so you can compare models even when the units differ. Under 10% is great!">ⓘ</span>
+                    </div>
+                    <p class="label">Mean Abs. % Error</p>
+                    <p class="value" id="val-mape">--</p>
+                    <p class="metric-plain" id="plain-mape">Loading…</p>
+                    <div class="performance-badge" id="perf-badge">--</div>
+                </div>
+
+                <div class="metric-card rmse glass-panel">
+                    <div class="metric-header">
+                        <h3>RMSE</h3>
+                        <span class="metric-tooltip" data-tip="RMSE squares the errors before averaging, so it penalises big mistakes more heavily than MAE. A much higher RMSE than MAE means there were some very bad predictions.">ⓘ</span>
+                    </div>
+                    <p class="label">Root Mean Sq. Error</p>
+                    <p class="value" id="val-rmse">--</p>
+                    <p class="metric-plain" id="plain-rmse">Loading…</p>
+                </div>
+
+            </div>
+
+            <!-- ── Insight Panel ── -->
+            <div class="insight-panel glass-panel" id="insight-panel">
+                <div class="insight-icon">🤖</div>
+                <div class="insight-text" id="insight-text">
+                    <h3>Model Insights</h3>
+                    <p>Running analysis…</p>
+                </div>
+            </div>
+
+            <!-- ── Charts ── -->
+            <div class="charts-container">
+                <div class="chart-wrapper glass-panel">
+                    <div class="chart-title-row">
+                        <h2>Actual vs Predicted</h2>
+                        <span class="chart-hint">Blue = real data &nbsp;|&nbsp; Red dashed = model's guess</span>
+                    </div>
+                    <canvas id="lineChart"></canvas>
+                </div>
+                <div class="chart-wrapper glass-panel">
+                    <div class="chart-title-row">
+                        <h2>Error Comparison</h2>
+                        <span class="chart-hint">Lower bars = better model</span>
+                    </div>
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+
+            <!-- ── Metric Glossary ── -->
+            <div class="glossary-row">
+                <div class="glossary-card glass-panel">
+                    <span class="g-icon" style="color:#60a5fa">📏</span>
+                    <div>
+                        <strong>MAE — Mean Absolute Error</strong>
+                        <p>Average size of the errors, ignoring direction. Easy to understand: if MAE = 2.5°C, the model is typically off by 2.5 degrees.</p>
+                    </div>
+                </div>
+                <div class="glossary-card glass-panel">
+                    <span class="g-icon" style="color:#34d399">%</span>
+                    <div>
+                        <strong>MAPE — Mean Abs. Percentage Error</strong>
+                        <p>Same as MAE but as a percentage. Great for comparing models on different datasets. &lt;10% = excellent, 10–20% = good, &gt;20% = needs work.</p>
+                    </div>
+                </div>
+                <div class="glossary-card glass-panel">
+                    <span class="g-icon" style="color:#f87171">⚡</span>
+                    <div>
+                        <strong>RMSE — Root Mean Squared Error</strong>
+                        <p>Punishes big outlier errors more than MAE. If RMSE is much higher than MAE, the model made a few very bad predictions.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-actions">
+                <a href="sales_data.csv" download="sales_data.csv" class="btn primary-btn">⬇ Download Sample CSV</a>
+            </div>
+        </main>
+
+        <footer>
+            <p>Evaluating Forecast Accuracy using MAE, MAPE and RMSE &nbsp;|&nbsp; Mini Project</p>
+        </footer>
+    </div>
+
+    <!-- ── Tooltip popup ── -->
+    <div id="tooltip-popup" class="tooltip-popup hidden"></div>
+
+    <!-- ── Manual Data Entry Modal ── -->
+    <div id="manual-modal" class="modal-overlay hidden">
+        <div class="modal-box glass-panel">
+            <div class="modal-header">
+                <h2>✏️ Manual Data Entry</h2>
+                <button id="close-manual-modal" class="modal-close" title="Close">✕</button>
+            </div>
+            <p class="modal-desc">Enter your data below. Minimum <strong>10 rows</strong> required. Values must be numeric.</p>
+            <div class="table-wrapper">
+                <table id="manual-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Label / Day</th>
+                            <th>Value (Sales / Temp…)</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="manual-tbody">
+                        <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="btn clear-btn" id="clear-rows-btn">🗑 Clear All</button>
+                <button class="btn secondary-btn" id="add-row-btn">+ Add Row</button>
+                <button class="btn example-btn" id="load-example-btn">📋 Load Example</button>
+                <button class="btn run-btn" id="run-manual-btn">▶ Run Analysis</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
